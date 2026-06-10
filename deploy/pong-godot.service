@@ -1,0 +1,28 @@
+[Unit]
+Description=Pong (Godot) dedicated server
+After=network.target
+
+[Service]
+# Godot needs --headless, and project args come after a literal `--`.
+# Port 7778 so this coexists with the legacy Unity server on 7777 (see DEPLOY.md).
+ExecStart=/home/ubuntu/pong-godot/PongServer.x86_64 --headless -- --server --port 7778
+WorkingDirectory=/home/ubuntu/pong-godot
+User=ubuntu
+Restart=always
+RestartSec=2
+
+# Ranked persistence (optional): drop a file at ~/pong-godot.env with
+#   PONG_SUPABASE_URL=https://<proj>.supabase.co
+#   PONG_SUPABASE_KEY=<service_role key>
+# and restart. The leading '-' makes it optional — without the file the server
+# falls back to the in-memory store, so deploys work with or without creds.
+EnvironmentFile=-/home/ubuntu/pong-godot.env
+
+# Graceful drain: 'systemctl stop' sends SIGTERM, which the server turns into a
+# drain (refuse new, drop waiting + spectators, let live matches finish, then quit).
+# Give it a generous window before systemd SIGKILLs; idle servers exit at once.
+KillSignal=SIGTERM
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target

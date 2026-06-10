@@ -60,6 +60,17 @@ godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 779
 # each autoclient prints SMOKE_OK / SMOKE_FAIL and exits 0 / 2
 ```
 
+## Deploying the dedicated server
+
+[deploy/](deploy/) holds the full GCP deploy pipeline, mirroring the Unity
+original's: `redeploy-gcp.ps1` exports the Linux server (single embedded-PCK
+binary), uploads it, installs the `pong-godot.service` systemd unit on **UDP
+7778** — coexisting with the legacy Unity server on 7777 — and gates the deploy
+on a 2-autoclient online smoke against the live server. One-time firewall setup
+and the lockstep client/server rule are in [deploy/DEPLOY.md](deploy/DEPLOY.md).
+`deploy/local-wsl-smoke.sh` verifies the exported Linux artifact end-to-end
+under WSL before any VM is touched.
+
 ## Android APK
 
 A signed debug APK ships on the [Releases](https://github.com/JeanPaulParenteau/pong-godot/releases)
