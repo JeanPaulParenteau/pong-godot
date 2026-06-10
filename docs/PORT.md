@@ -138,7 +138,7 @@ deployment in practice, where the drain ran only when the signal reached
 ### 8. Tests
 
 Unity's 106 EditMode tests → a single `SceneTree` script
-(`tests/run_tests.gd`, 169 checks) covering the same behaviours: session state
+(`tests/run_tests.gd`, 171 checks) covering the same behaviours: session state
 machine and physics (wall/paddle/tunneling/edge-clip/self-score/win/rematch),
 bounce + spin + caps math, bot decision/cadence/determinism, Elo, ranked
 aggregates, roster, spectator routing, handshake + discovery codecs, launch
@@ -192,6 +192,31 @@ loopback connection"). Three gotchas cost real time and are worth recording:
 
 The icon is `res://icon.svg` (project + editor) plus `icons/launcher_*.png`
 (legacy 192 + adaptive fg/bg 432) referenced by the preset.
+
+### 11. Top-level Controls must fit the viewport explicitly (the "grey screen" bug)
+
+The first APKs (v0.1.0/0.1.1) booted to a grey screen — no menu — on real phones.
+Two bugs, both because the UI Controls are parented under the plain `Node` scene
+root (so they are *not* auto-sized to the viewport):
+
+1. `ConnectScreen`/`GameRenderer` had `size == (0,0)`; the centered menu card
+   landed at negative coordinates, off-screen. Fix: each calls `_fit_to_viewport()`
+   in `_ready` (and on `get_viewport().size_changed`) to set its size to the
+   visible rect — Godot only auto-fills a Control that is a *direct* child of the
+   viewport.
+2. `ConnectScreen._is_connected()` treated Godot's default `OfflineMultiplayerPeer`
+   (which reports `CONNECTION_CONNECTED` with `is_server() == true`) as a live
+   online match, so it hid the menu behind the in-match leave state. Fix: exclude
+   the offline peer with `and not multiplayer.is_server()`.
+
+Both reproduce on desktop, so they're verified there (the in-engine viewport
+capture, below, was how they were caught). The Android **emulator** added noise:
+`adb screencap` can't read Godot's GL SurfaceView (host GPU → grey capture), and
+software GL (swiftshader) has a 2D-compositing quirk (`101010-2` framebuffer) —
+neither is a real-device issue. The debug capture node (`src/client/debug_capture.gd`,
+`--shot-interval` / F12, gated behind `OS.is_debug_build()`) saves the engine's own
+`get_viewport().get_image()`, which sidesteps all of that and is the supported way
+to see the running game on-device.
 
 ## Known gaps / follow-ups (continued)
 

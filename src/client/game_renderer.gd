@@ -40,8 +40,16 @@ var _last_edge_clips := -1
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE  # gameplay input is polled, not event-driven
+	# Parented under a plain Node, so fill the viewport explicitly (anchors would
+	# resolve against a 0x0 parent rect, leaving FieldView mapping into nothing).
+	_fit_to_viewport()
+	get_viewport().size_changed.connect(_fit_to_viewport)
+
+
+func _fit_to_viewport() -> void:
+	position = Vector2.ZERO
+	size = get_viewport().get_visible_rect().size
 
 
 func _process(delta: float) -> void:

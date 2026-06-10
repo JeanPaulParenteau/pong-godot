@@ -22,6 +22,7 @@ var require_play := false # autoclient smoke: exit non-zero unless a real match 
 var max_matches := 0      # server: per-process match cap; 0 = unlimited
 var player_id := ""       # autoclient: connect as this Player (ranked smoke)
 var player_name := ""     # autoclient: display name for -playerid
+var shot_interval := 0    # debug builds: save a viewport PNG every N frames (0 = off)
 
 
 ## Mode precedence: -autoclient, then -server/-dedicated, else headless→Server / windowed→Client.
@@ -34,7 +35,13 @@ func resolve_mode(is_headless: bool) -> int:
 
 
 static func from_command_line():  # -> LaunchConfig
-	return parse(OS.get_cmdline_user_args(), func(key: String) -> String:
+	# Desktop/headless pass project args after `--` (get_cmdline_user_args). The
+	# Android export's command_line/extra_args land in the full arg list with no
+	# `--` separator, so fall back to that — parse() ignores unrecognized flags.
+	var args := OS.get_cmdline_user_args()
+	if args.is_empty():
+		args = OS.get_cmdline_args()
+	return parse(args, func(key: String) -> String:
 		return OS.get_environment(key))
 
 
@@ -75,6 +82,9 @@ static func parse(args: PackedStringArray, env: Callable):  # -> LaunchConfig
 			"quitafter":
 				if i + 1 < args.size() and args[i + 1].is_valid_float():
 					config.quit_after = args[i + 1].to_float()
+			"shot-interval", "shotinterval":
+				if i + 1 < args.size() and args[i + 1].is_valid_int():
+					config.shot_interval = args[i + 1].to_int()
 
 	# Port precedence: -port arg > PONG_PORT env > default.
 	if _valid_port(port_arg):

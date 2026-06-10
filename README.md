@@ -44,7 +44,7 @@ godot --path .
 # Dedicated server (windowed close request drains gracefully)
 godot --headless --path . -- --server --port 7777
 
-# Headless unit tests (169 checks)
+# Headless unit tests (171 checks)
 godot --headless --path . --script tests/run_tests.gd
 
 # Headless autoclient (end-to-end smoke: exits 0 only if a real match was seen)
@@ -59,6 +59,34 @@ godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 779
 godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 7799 --quitafter 15
 # each autoclient prints SMOKE_OK / SMOKE_FAIL and exits 0 / 2
 ```
+
+## Developing & testing the running game
+
+The dev loop, fastest first:
+
+1. **Headless unit tests** (`tests/run_tests.gd`, ~2 s) — pure sim/bot/Elo/netcode/FX logic.
+2. **Headless smoke** — the server + autoclient commands above; real ENet sockets, exit codes.
+3. **Desktop run** — `godot --path .` (add `-- --solo` to jump straight into a vs-CPU match).
+4. **Android emulator** — `adb install` + `am start` + `input tap/swipe`; drive and observe.
+
+**Seeing the running game (the debug capture tool).** In debug builds only, a
+screenshotter saves the engine's own viewport — the reliable way to capture on
+Android, where `adb screencap` can't read Godot's GL SurfaceView:
+
+- **F12** → saves `user://shots/shot_NNN.png` (desktop).
+- **`--shot-interval N`** → overwrites `user://cap.png` every N frames, for
+  adb-driven testing. The committed **"Android Emu"** export preset bakes this in
+  (plus x86_64 for the emulator), so:
+  ```sh
+  godot --headless --path . --export-debug "Android Emu" build/PongGodot-emu.apk
+  adb install -r build/PongGodot-emu.apk && adb shell am start -n com.parenteau.ponggodot/com.godot.game.GodotAppLauncher
+  # tap around with `adb shell input tap X Y`, then pull what the engine rendered:
+  adb exec-out run-as com.parenteau.ponggodot cat files/cap.png > cap.png
+  ```
+
+The capture node is gated behind `OS.is_debug_build()` and inert unless the flag
+is set, so it never affects a release build. Use the **"Android"** preset (arm-only,
+no flag) for shipping and **"Android Emu"** (x86_64 + capture) for the emulator.
 
 ## Deploying the dedicated server
 
@@ -106,6 +134,7 @@ Notes from setting this up (see [docs/PORT.md](docs/PORT.md) for the full trail)
 | `--quitafter S` / `--dropafter S` | autoclient lifetime / intentional mid-run drop |
 | `--playerid ID --playername NAME` | autoclient connects as an identified Player (ranked) |
 | `--solo` | client jumps straight into a vs-CPU match (dev/demo) |
+| `--shot-interval N` | debug builds: save the viewport to `user://cap.png` every N frames (see Developing & testing) |
 
 ### Controls
 

@@ -428,6 +428,11 @@ func _test_launch_config() -> void:
 	check(c.player_id == "p1" and c.player_name == "Ann" and c.max_matches == 5,
 			"identity + maxmatches parsed")
 
+	c = LaunchConfig.parse(PackedStringArray(["--solo", "--shot-interval", "20"]), no_env)
+	check(c.has_solo_flag and c.shot_interval == 20, "solo flag + shot-interval parsed")
+	check(LaunchConfig.parse(PackedStringArray([]), no_env).shot_interval == 0,
+			"shot-interval defaults off")
+
 
 func _test_connection_flow() -> void:
 	var f := ConnectionFlow.new()

@@ -16,6 +16,7 @@ const OnlineMatch := preload("res://src/client/online_match.gd")
 const ConnectScreen := preload("res://src/client/connect_screen.gd")
 const AutoClient := preload("res://src/client/autoclient.gd")
 const Settings := preload("res://src/client/settings.gd")
+const DebugCapture := preload("res://src/client/debug_capture.gd")
 
 var _server: MatchServer = null
 
@@ -78,6 +79,13 @@ func _ready() -> void:
 			add_child(screen)
 			if config.has_solo_flag:
 				screen.debug_start_solo()
+
+			# Debug-only viewport screenshotter (F12 / --shot-interval). Never in release.
+			if OS.is_debug_build():
+				var cap := DebugCapture.new()
+				cap.name = "DebugCapture"
+				add_child(cap)
+				cap.setup(config.shot_interval)
 
 		LaunchConfig.LaunchMode.AUTO_CLIENT:
 			var online := OnlineMatch.new()

@@ -63,11 +63,21 @@ func setup(net: Node, online: Node) -> void:
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	# This Control is parented under a plain Node (the scene root), so it does NOT
+	# auto-fill the viewport — anchors would resolve against a 0x0 parent rect and
+	# strand the centered menu off-screen. Size it to the window explicitly and
+	# track resizes/rotation.
+	_fit_to_viewport()
+	get_viewport().size_changed.connect(_fit_to_viewport)
 	multiplayer.connected_to_server.connect(_on_connected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	_build_ui()
+
+
+func _fit_to_viewport() -> void:
+	position = Vector2.ZERO
+	size = get_viewport().get_visible_rect().size
 
 
 # ==================================================================
@@ -227,8 +237,14 @@ func _close_peer() -> void:
 
 
 func _is_connected() -> bool:
+	# Godot installs an OfflineMultiplayerPeer by default, which reports
+	# CONNECTION_CONNECTED with is_server() == true. Exclude it (and the host),
+	# or the menu mistakes "no connection" for "in an online match" and hides
+	# itself behind the leave state — the menu would never appear.
 	var peer := multiplayer.multiplayer_peer
-	return peer != null and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
+	return (peer != null
+			and peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
+			and not multiplayer.is_server())
 
 
 func _in_flight() -> bool:
