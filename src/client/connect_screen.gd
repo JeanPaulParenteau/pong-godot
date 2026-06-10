@@ -22,7 +22,7 @@ var _net: Node      # NetBridge
 var _online: Node   # OnlineMatch
 
 var _ip: String = GameConfig.PRODUCTION_SERVER_ADDRESS
-var _port_text := str(GameConfig.DEFAULT_PORT)
+var _port_text := str(GameConfig.PRODUCTION_SERVER_PORT)
 var _status := ""
 
 # The connection/reconnect decisions live in this pure state machine.

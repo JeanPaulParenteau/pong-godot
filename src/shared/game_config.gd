@@ -7,9 +7,11 @@
 const DEFAULT_PORT := 7777
 const DEFAULT_CLIENT_ADDRESS := "127.0.0.1"
 # The live cloud dedicated server. Prefilled as the client's default target.
-# NOTE: this address currently runs the Unity/NGO server; the Godot client can
-# only talk to a Godot (ENet) server, so deploy one before pointing players here.
+# The Godot server coexists with the legacy Unity server on the same VM: Unity
+# owns udp/7777, Godot owns udp/7778 (see deploy/DEPLOY.md) — hence the
+# non-default production port here.
 const PRODUCTION_SERVER_ADDRESS := "34.53.62.38"
+const PRODUCTION_SERVER_PORT := 7778
 const TICK_RATE := 30
 
 # Hello payload that marks a client as a read-only spectator ("Pong TV").
