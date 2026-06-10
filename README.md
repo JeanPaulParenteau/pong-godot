@@ -60,6 +60,28 @@ godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 779
 # each autoclient prints SMOKE_OK / SMOKE_FAIL and exits 0 / 2
 ```
 
+## Android APK
+
+A signed debug APK ships on the [Releases](https://github.com/JeanPaulParenteau/pong-godot/releases)
+page (`com.parenteau.ponggodot`, arm64-v8a + armeabi-v7a, INTERNET permission for
+online play). To build it yourself you need JDK 17, the Android SDK (build-tools +
+platform-tools), and the matching Godot Android export templates; with those and a
+debug keystore configured in Godot's editor settings:
+
+```sh
+# prebuilt-template path (no Gradle daemon needed — just packages + signs)
+godot --headless --path . --export-debug "Android" build/PongGodot.apk
+```
+
+Notes from setting this up (see [docs/PORT.md](docs/PORT.md) for the full trail):
+- On Windows the export templates live in the **data** dir
+  (`%LOCALAPPDATA%\Godot\export_templates\<version>\`), not the config dir.
+- Android export requires `rendering/textures/vram_compression/import_etc2_astc=true`
+  in `project.godot` (already set here) or validation fails — and in headless mode
+  Godot reports that failure with an *empty* message, so it's easy to misdiagnose.
+- The preset uses `use_gradle_build=false`; the Gradle path needs a loopback socket
+  for its daemon, which a sandboxed shell can block.
+
 ### Launch flags
 
 | Flag | Meaning |

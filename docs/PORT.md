@@ -170,5 +170,32 @@ persist to `user://settings.cfg` and apply through one `Settings.apply()`.
   watching the *only* match going idle simply stops receiving snapshots; the
   client falls back to the waiting screen after a 2 s starvation timeout
   (Unity could `NetworkHide` instantly).
-- No Android export preset yet (the Unity original shipped APKs). The code is
-  touch-ready (`emulate_mouse_from_touch`, landscape orientation set).
+### 10. Android APK
+
+The Unity original shipped APKs, so this port does too — a signed debug APK on
+the Releases page (`com.parenteau.ponggodot`, arm64-v8a + armeabi-v7a, custom
+Pong launcher icon, INTERNET/NETWORK_STATE/WAKE_LOCK permissions). The preset
+(`export_presets.cfg`) uses the **prebuilt-template path** (`use_gradle_build=false`):
+Godot injects the PCK into the official `android_debug.apk` and signs it with
+`apksigner` + the debug keystore — no Gradle daemon, which matters because the
+daemon needs a loopback socket a sandboxed shell can refuse ("Unable to establish
+loopback connection"). Three gotchas cost real time and are worth recording:
+
+1. **Templates live in the data dir on Windows** (`%LOCALAPPDATA%\Godot\export_templates\`),
+   not the config dir (`%APPDATA%`) where editor settings live.
+2. **`rendering/textures/vram_compression/import_etc2_astc=true` is mandatory** for
+   Android export even with zero textures — and headless Godot reports the missing
+   setting as an *empty* configuration error, which masks the cause completely.
+   This is now set in `project.godot`.
+3. Debug-keystore user defaults to `androiddebugkey`, so Godot omits it from saved
+   editor settings — its absence there is not a misconfiguration.
+
+The icon is `res://icon.svg` (project + editor) plus `icons/launcher_*.png`
+(legacy 192 + adaptive fg/bg 432) referenced by the preset.
+
+## Known gaps / follow-ups (continued)
+
+- The Android APK is a **debug** build (Godot debug keystore). A Play-store release
+  needs a release keystore + AAB; the preset is one `export-release` away.
+- Online play from the APK still needs a deployed **Godot** server (the GCP box runs
+  Unity); see the server-deploy discussion. LAN and vs-CPU work offline today.
