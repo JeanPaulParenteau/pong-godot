@@ -1,11 +1,18 @@
 # Deploying the Godot dedicated server
 
+> **Status (2026-06-10): deployed and live** at `34.53.62.38:7778`
+> (`pong-godot.service`, firewall rule `allow-pong-godot-udp`). The legacy Unity
+> server has been **retired**: `pong.service` is stopped + disabled and its
+> udp/7777 firewall rule deleted. Its files remain at `~/pong` on the VM —
+> rollback is `sudo systemctl enable --now pong.service` plus recreating the
+> udp/7777 rule.
+
 The Godot client speaks **ENet/UDP** and cannot talk to the legacy Unity/NGO
 server — so online play needs a *Godot* server running somewhere. This directory
-deploys one to the existing GCP VM **alongside** the Unity server, on a separate
-port, so current Unity players are never disrupted.
+deploys one to the existing GCP VM on its own port; the table below records the
+coexist layout used during the transition (and what rollback would restore).
 
-## Coexist model (recommended)
+## Coexist model (transition layout)
 
 | | Unity server (legacy) | Godot server (this) |
 | --- | --- | --- |
