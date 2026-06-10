@@ -565,9 +565,15 @@ func _labeled_field(parent: Control, label_text: String, value: String,
 
 
 func _corner_button(text: String, on_click: Callable) -> Button:
+	# Pin a fixed-size button to the top-right via explicit anchor offsets. Setting
+	# anchors then `position` alone leaves the button at its initial 0x0 size (it's
+	# not in a container, so custom_minimum_size doesn't grow it) — it would never
+	# show. Offsets give it a concrete rect that tracks the corner on resize.
 	var b := _add_button(self, text, Palette.NEUTRAL, on_click)
 	b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	b.position = Vector2(-164, 14)
-	b.custom_minimum_size = Vector2(150, 48)
+	b.offset_left = -174
+	b.offset_right = -18
+	b.offset_top = 16
+	b.offset_bottom = 70
 	b.visible = false
 	return b

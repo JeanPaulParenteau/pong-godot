@@ -209,6 +209,13 @@ root (so they are *not* auto-sized to the viewport):
    online match, so it hid the menu behind the in-match leave state. Fix: exclude
    the offline peer with `and not multiplayer.is_server()`.
 
+A third instance of the same root cause: the in-match **Leave** button
+(`_corner_button`) set `PRESET_TOP_RIGHT` anchors while still 0×0 and relied on
+`custom_minimum_size` (which only sizes Controls inside a Container) — so it
+anchored at zero size and never appeared, leaving no way off the match screen on
+touch (no `Esc`). Fix: give it a concrete rect via explicit anchor offsets. This
+backs both the solo and online Leave buttons.
+
 Both reproduce on desktop, so they're verified there (the in-engine viewport
 capture, below, was how they were caught). The Android **emulator** added noise:
 `adb screencap` can't read Godot's GL SurfaceView (host GPU → grey capture), and
