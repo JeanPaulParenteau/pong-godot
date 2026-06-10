@@ -1,0 +1,108 @@
+# Pong (Godot)
+
+A Godot 4.6 port of [JeanPaulParenteau/pong](https://github.com/JeanPaulParenteau/pong)
+(Unity 6 + Netcode for GameObjects). Same game, same rules, same
+server-authoritative architecture — rebuilt on GDScript and Godot's high-level
+multiplayer (ENet/UDP). See [docs/PORT.md](docs/PORT.md) for every design
+decision made in the translation.
+
+**Features**
+
+- Single-player vs CPU (Easy / Medium / Hard — one bot algorithm, three feels)
+- Online 1v1 on a dedicated server: concurrent matches, auto-pairing,
+  auto-reconnect with exponential backoff
+- Server-authoritative physics with spin, edge-clip self-scores, swept
+  (tunnel-proof) paddle collisions
+- Client-side: ~100 ms interpolation for remote state, capped prediction for
+  your own paddle, and a perspective mirror so you are always the blue paddle
+  on the left
+- "Pong TV": watch a live match as a read-only spectator
+- LAN server discovery (wire-compatible with the Unity build's discovery)
+- Ranked Elo ratings persisted to Supabase (optional, server-side)
+- Procedural audio — no assets anywhere in the project
+
+## Requirements
+
+[Godot 4.6.x](https://godotengine.org/download) (standard build, not .NET).
+On Windows: `winget install GodotEngine.GodotEngine`.
+
+## Run
+
+All commands from the repo root. `godot` is the Godot 4.6 executable
+(on Windows prefer the `_console.exe` for visible logs). Project args go
+after `--`.
+
+```sh
+# Play (menu: Play Online / Vs Computer / Pong TV)
+godot --path .
+
+# Dedicated server (windowed close request drains gracefully)
+godot --headless --path . -- --server --port 7777
+
+# Headless unit tests (142 checks)
+godot --headless --path . --script tests/run_tests.gd
+
+# Headless autoclient (end-to-end smoke: exits 0 only if a real match was seen)
+godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 7777 --quitafter 15
+```
+
+A full local online test is one server + two autoclients:
+
+```sh
+godot --headless --path . -- --server --port 7799 &
+godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 7799 --quitafter 15 &
+godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 7799 --quitafter 15
+# each autoclient prints SMOKE_OK / SMOKE_FAIL and exits 0 / 2
+```
+
+### Launch flags
+
+| Flag | Meaning |
+| --- | --- |
+| `--server` / `--dedicated` | dedicated server (also the default when headless) |
+| `--port N` | listen/connect port (or `PONG_PORT` env; default 7777) |
+| `--maxmatches N` | per-process match cap; refused clients see "server full" (or `PONG_MAX_MATCHES`; 0 = unlimited) |
+| `--autoclient` | headless test client |
+| `--smoke` | autoclient exits non-zero unless side+playing+ball-motion were observed |
+| `--address IP` | autoclient target |
+| `--quitafter S` / `--dropafter S` | autoclient lifetime / intentional mid-run drop |
+| `--playerid ID --playername NAME` | autoclient connects as an identified Player (ranked) |
+
+### Controls
+
+Drag (touch) or move the mouse to drive your paddle vertically. `Esc` or the
+on-screen **Leave** button exits a match.
+
+### Ranked persistence (optional)
+
+The server keeps Elo + win/loss per Player in memory by default. Set
+`PONG_SUPABASE_URL` and `PONG_SUPABASE_KEY` (service-role key — server only,
+never in a client) to persist to a Supabase `players` table
+(`player_id, display_name, rating, wins, losses, games_played` — the same
+schema the Unity server uses). Identified games only; anonymous games are
+never rated.
+
+## Project layout
+
+```
+src/shared/   pure simulation + protocol (no nodes): GameSession, PongBot, Elo,
+              MatchRoster, SpectatorRouter, MatchSnapshot, handshake/discovery codecs
+src/client/   view + input + connection UX: renderer, menu, solo match, prediction,
+              interpolation, reconnect flow, LAN browser, identity, audio
+src/server/   MatchServer (ENet adapter over the shared core), player stores, ranked
+src/net/      NetBridge — the one RPC surface shared by client and server
+tests/        headless test runner (ports the Unity EditMode suite's behaviours)
+```
+
+The layering rule is inherited from the Unity original: everything in
+`src/shared/` is pure and headless-testable; nodes and networking live at the
+edges. The deeper rationale for each subsystem is documented in the original
+repo's `docs/adr/` and summarized per-divergence in [docs/PORT.md](docs/PORT.md).
+
+## Caveat: the cloud server
+
+`GameConfig.PRODUCTION_SERVER_ADDRESS` still points at the original deployment,
+which today runs the **Unity** server. The two game transports (Unity Transport
+vs ENet) are not cross-compatible — deploy this project's `--server` build
+there (or anywhere) before pointing players at it. Only the LAN *discovery*
+protocol is shared between the two implementations.
