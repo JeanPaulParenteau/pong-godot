@@ -20,6 +20,11 @@ decision made in the translation.
 - LAN server discovery (wire-compatible with the Unity build's discovery)
 - Ranked Elo ratings persisted to Supabase (optional, server-side)
 - Procedural audio — no assets anywhere in the project
+- Game feel driven off the *authoritative* event counters (never client guesses):
+  screen shake, impact particles, paddle hit flashes, ball heat tint +
+  squash-stretch as rallies ramp to the speed cap, rally counter, MATCH POINT
+  banner, popping serve countdown, goal flash
+- Persisted client settings (sound, fullscreen) and animated menu transitions
 
 ## Requirements
 
@@ -39,7 +44,7 @@ godot --path .
 # Dedicated server (windowed close request drains gracefully)
 godot --headless --path . -- --server --port 7777
 
-# Headless unit tests (142 checks)
+# Headless unit tests (169 checks)
 godot --headless --path . --script tests/run_tests.gd
 
 # Headless autoclient (end-to-end smoke: exits 0 only if a real match was seen)
@@ -67,6 +72,7 @@ godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 779
 | `--address IP` | autoclient target |
 | `--quitafter S` / `--dropafter S` | autoclient lifetime / intentional mid-run drop |
 | `--playerid ID --playername NAME` | autoclient connects as an identified Player (ranked) |
+| `--solo` | client jumps straight into a vs-CPU match (dev/demo) |
 
 ### Controls
 

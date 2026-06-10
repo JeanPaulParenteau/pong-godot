@@ -138,7 +138,7 @@ deployment in practice, where the drain ran only when the signal reached
 ### 8. Tests
 
 Unity's 106 EditMode tests → a single `SceneTree` script
-(`tests/run_tests.gd`, 142 checks) covering the same behaviours: session state
+(`tests/run_tests.gd`, 169 checks) covering the same behaviours: session state
 machine and physics (wall/paddle/tunneling/edge-clip/self-score/win/rematch),
 bounce + spin + caps math, bot decision/cadence/determinism, Elo, ranked
 aggregates, roster, spectator routing, handshake + discovery codecs, launch
@@ -146,6 +146,19 @@ config precedence, connection flow + backoff, throttle, snapshot buffer,
 predictor, and the snapshot wire codec. PlayMode-equivalent coverage comes
 from the `--autoclient --smoke` end-to-end harness instead (real server, real
 ENet sockets).
+
+### 9. Game-feel additions beyond the Unity build
+
+The port adds a "juice" layer the Unity version didn't have, but it follows the
+same architectural rule that made the Unity AudioFx safe: every effect is driven
+by the replicated, server-authoritative counters (paddle/wall/edge/score), never
+by client-side inference — so effects fire identically online, offline, and on
+Pong TV, and never desync from the simulation. The pipeline is
+`MatchEvents` (pure counter-delta detector, shared with audio) →
+`FxState` (pure: shake decay, particle sim with injectable RNG, paddle pulses,
+rally counter, ball heat) → renderer (dumb draw). Both new classes are
+unit-tested; the renderer stays logic-free. Client settings (mute, fullscreen)
+persist to `user://settings.cfg` and apply through one `Settings.apply()`.
 
 ## Known gaps / follow-ups
 

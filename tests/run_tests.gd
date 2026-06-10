@@ -25,6 +25,8 @@ const ReconnectPolicy := preload("res://src/client/reconnect_policy.gd")
 const InputThrottle := preload("res://src/client/input_throttle.gd")
 const SnapshotBuffer := preload("res://src/client/snapshot_buffer.gd")
 const PaddlePredictor := preload("res://src/client/paddle_predictor.gd")
+const MatchEvents := preload("res://src/client/match_events.gd")
+const FxState := preload("res://src/client/fx_state.gd")
 
 const DT := 1.0 / 30.0
 
@@ -50,6 +52,8 @@ func _init() -> void:
 	_test_snapshot_buffer()
 	_test_predictor()
 	_test_snapshot_wire()
+	_test_match_events()
+	_test_fx_state()
 
 	print("")
 	if _failures == 0:
@@ -520,3 +524,80 @@ func _test_snapshot_wire() -> void:
 	check(back.left_score == snap.left_score and back.right_score == snap.right_score,
 			"scores survive the wire")
 	check(MatchSnapshot.from_wire([1, 2, 3]) == null, "short wire payload rejected")
+
+
+func _fx_snap(paddle := 0, wall := 0, edge := 0, left := 0, right := 0,
+		ball := Vector2.ZERO) -> MatchSnapshot:
+	var s := MatchSnapshot.new()
+	s.paddle_hits = paddle
+	s.wall_hits = wall
+	s.edge_clips = edge
+	s.left_score = left
+	s.right_score = right
+	s.ball_position = ball
+	s.state = GameTypes.GameState.PLAYING
+	return s
+
+
+func _test_match_events() -> void:
+	var det := MatchEvents.new()
+	check(det.process(_fx_snap(5, 3, 1, 2, 2)).is_empty(), "first snapshot only primes")
+	check(det.process(_fx_snap(5, 3, 1, 2, 2)).is_empty(), "no change -> no events")
+	check(det.process(_fx_snap(6, 3, 1, 2, 2)) == [MatchEvents.EV_PADDLE_HIT],
+			"paddle counter bump -> paddle event")
+	check(det.process(_fx_snap(7, 3, 2, 2, 2)) == [MatchEvents.EV_EDGE_CLIP],
+			"edge clip suppresses the same-frame paddle event")
+	var multi := det.process(_fx_snap(7, 4, 2, 3, 2))
+	check(MatchEvents.EV_WALL_HIT in multi and MatchEvents.EV_SCORE in multi and multi.size() == 2,
+			"wall + score in one frame both emitted")
+	# Counter regression (new match on the same source) re-primes — no phantom events.
+	check(det.process(_fx_snap(0, 0, 0, 0, 0)).is_empty(), "regression re-primes silently")
+	check(det.process(_fx_snap(1, 0, 0, 0, 0)) == [MatchEvents.EV_PADDLE_HIT],
+			"events resume after re-prime")
+	det.reset()
+	check(det.process(_fx_snap(9, 9, 9, 4, 1)).is_empty(), "reset re-primes")
+
+
+func _test_fx_state() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var fx := FxState.new(rng)
+
+	fx.apply_event(MatchEvents.EV_PADDLE_HIT, _fx_snap(1, 0, 0, 0, 0, Vector2(7.0, 0.0)))
+	check(fx.shake > 0.0, "paddle hit raises shake")
+	check(fx.rally == 1, "paddle hit counts toward the rally")
+	check(fx.paddle_pulse_right == 1.0 and fx.paddle_pulse_left == 0.0,
+			"hit at +x pulses the right paddle")
+	check(not fx.particles.is_empty(), "paddle hit spawns particles")
+
+	var shake_before := fx.shake
+	fx.update(0.1, GameTypes.GameState.PLAYING)
+	check(fx.shake < shake_before, "shake decays")
+	check(fx.paddle_pulse_right < 1.0, "pulse decays")
+	check(fx.rally == 1, "rally persists while playing")
+
+	fx.apply_event(MatchEvents.EV_SCORE, _fx_snap(1, 0, 0, 1, 0, Vector2(8.0, 0.0)))
+	check(fx.rally == 0, "score resets the rally")
+	fx.apply_event(MatchEvents.EV_PADDLE_HIT, _fx_snap(2, 0, 0, 1, 0, Vector2(-7.0, 0.0)))
+	check(fx.paddle_pulse_left == 1.0, "hit at -x pulses the left paddle")
+	fx.update(0.1, GameTypes.GameState.SERVING)
+	check(fx.rally == 0, "rally clears outside PLAYING")
+
+	# Particles expire within their lifetime.
+	for i in 80:
+		fx.update(0.05, GameTypes.GameState.PLAYING)
+	check(fx.particles.is_empty(), "particles expire")
+	check(fx.shake == 0.0, "shake settles to zero")
+
+	fx.apply_event(MatchEvents.EV_EDGE_CLIP, _fx_snap(3, 0, 1, 1, 0))
+	fx.clear()
+	check(fx.particles.is_empty() and fx.shake == 0.0 and fx.rally == 0, "clear wipes all FX")
+
+	check_approx(FxState.heat(GameConfig.BALL_BASE_SPEED), 0.0, "heat 0 at launch speed")
+	check_approx(FxState.heat(GameConfig.BALL_MAX_SPEED), 1.0, "heat 1 at the cap")
+	check_approx(FxState.heat(0.0), 0.0, "heat clamps below")
+
+	check(FxState.is_match_point(GameConfig.WIN_SCORE - 1, 0), "match point at win-1")
+	check(FxState.is_match_point(2, GameConfig.WIN_SCORE - 1), "match point for either side")
+	check(not FxState.is_match_point(GameConfig.WIN_SCORE - 2, GameConfig.WIN_SCORE - 2),
+			"no match point below win-1")

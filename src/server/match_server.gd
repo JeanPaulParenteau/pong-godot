@@ -207,21 +207,25 @@ func _process(delta: float) -> void:
 
 
 func _tick_all() -> void:
+	var connected := multiplayer.get_peers()
 	for match_id in _matches:
 		var m: Dictionary = _matches[match_id]
 		m["session"].tick(_tick_dt)
 		m["tick"] += 1
 		_detect_game_completion(m)
-		_publish(match_id, m)
+		_publish(match_id, m, connected)
 
 
 ## Push this match's snapshot to its participants and any spectators routed to it.
-func _publish(match_id: int, m: Dictionary) -> void:
+## Guarded against peers that closed this frame (their disconnect event may land
+## after the tick that would otherwise still publish to them).
+func _publish(match_id: int, m: Dictionary, connected: PackedInt32Array) -> void:
 	var wire: Array = MatchSnapshot.from_session(m["session"], match_id, m["tick"]).to_wire()
 	for peer_id in m["participants"]:
-		_net.rpc_id(peer_id, "client_snapshot", wire)
+		if peer_id in connected:
+			_net.rpc_id(peer_id, "client_snapshot", wire)
 	for spec in _spectator_showing:
-		if _spectator_showing[spec] == match_id:
+		if _spectator_showing[spec] == match_id and spec in connected:
 			_net.rpc_id(spec, "client_snapshot", wire)
 
 

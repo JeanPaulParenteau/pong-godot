@@ -16,6 +16,7 @@ const PlayerIdentity := preload("res://src/client/player_identity.gd")
 const Palette := preload("res://src/client/palette.gd")
 const LanDiscovery := preload("res://src/client/lan_discovery.gd")
 const LocalMatch := preload("res://src/client/local_match.gd")
+const Settings := preload("res://src/client/settings.gd")
 
 var _net: Node      # NetBridge
 var _online: Node   # OnlineMatch
@@ -43,6 +44,8 @@ var _server_list: VBoxContainer
 var _online_button: Button
 var _lan_button: Button
 var _custom_toggle: Button
+var _sound_button: Button
+var _fullscreen_button: Button
 var _leave_button: Button
 var _solo_leave_button: Button
 var _status_label: Label
@@ -188,6 +191,11 @@ func _start_solo(profile) -> void:
 	_solo.begin(profile)
 
 
+## Dev/demo (--solo): jump straight into a vs-CPU match, skipping the menu.
+func debug_start_solo() -> void:
+	_start_solo(BotProfile.medium())
+
+
 ## User-initiated connect: mark the flow CONNECTING, then start the ENet client.
 func _connect_to(ip: String, port_text: String) -> void:
 	_flow.begin_connect(ip, port_text)
@@ -290,10 +298,10 @@ func _process(_delta: float) -> void:
 	else:
 		show_menu = true
 
-	_menu_panel.visible = show_menu
-	_spectator_panel.visible = show_spectator
+	_set_panel_visible(_menu_panel, show_menu)
+	_set_panel_visible(_spectator_panel, show_spectator)
 	_leave_button.visible = show_leave
-	_solo_panel.visible = show_solo and _solo.finished
+	_set_panel_visible(_solo_panel, show_solo and _solo != null and _solo.finished)
 	_solo_leave_button.visible = show_solo and not _solo.finished
 
 	if show_menu:
@@ -310,6 +318,8 @@ func _refresh_menu() -> void:
 	_lan_button.text = "Searching LAN..." if (_discovery != null and _discovery.searching()) else "Find LAN games"
 	_custom_toggle.text = "Custom server  ▾" if _show_custom else "Custom server  ▸"
 	_custom_panel.visible = _show_custom
+	_sound_button.text = "Sound: Off" if Settings.muted() else "Sound: On"
+	_fullscreen_button.text = "Fullscreen: On" if Settings.fullscreen() else "Fullscreen: Off"
 	_status_label.text = _status
 
 
@@ -337,6 +347,17 @@ func _commit_name() -> void:
 
 static func _dots() -> String:
 	return ".".repeat((Time.get_ticks_msec() / 500) % 4)
+
+
+## Show/hide a panel with a quick fade-in on the rising edge (a touch of motion
+## that makes screen changes read as intentional rather than abrupt).
+func _set_panel_visible(panel: Control, shown: bool) -> void:
+	if panel.visible == shown:
+		return
+	panel.visible = shown
+	if shown:
+		panel.modulate.a = 0.0
+		create_tween().tween_property(panel, "modulate:a", 1.0, 0.18)
 
 
 # ==================================================================
@@ -401,6 +422,14 @@ func _build_menu_panel() -> void:
 	_lan_button = _add_button(_custom_panel, "Find LAN games", Palette.NEUTRAL, _search_lan)
 	_server_list = VBoxContainer.new()
 	_custom_panel.add_child(_server_list)
+
+	# Client settings, persisted to user:// and applied immediately.
+	var settings_row := HBoxContainer.new()
+	box.add_child(settings_row)
+	_sound_button = _add_button(settings_row, "", Palette.NEUTRAL, func() -> void:
+		Settings.set_muted(not Settings.muted()), false, true)
+	_fullscreen_button = _add_button(settings_row, "", Palette.NEUTRAL, func() -> void:
+		Settings.set_fullscreen(not Settings.fullscreen()), false, true)
 
 	_status_label = Label.new()
 	_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

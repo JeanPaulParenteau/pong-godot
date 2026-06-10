@@ -13,6 +13,7 @@ enum LaunchMode { CLIENT, SERVER, AUTO_CLIENT }
 
 var has_server_flag := false
 var has_auto_client_flag := false
+var has_solo_flag := false  # client: jump straight into a vs-CPU match (dev/demo)
 var port: int = GameConfig.DEFAULT_PORT
 var client_address: String = GameConfig.DEFAULT_CLIENT_ADDRESS
 var drop_after := -1.0    # autoclient: never, unless set
@@ -49,6 +50,8 @@ static func parse(args: PackedStringArray, env: Callable):  # -> LaunchConfig
 				config.has_server_flag = true
 			"autoclient":
 				config.has_auto_client_flag = true
+			"solo":
+				config.has_solo_flag = true
 			"smoke":
 				config.require_play = true
 			"address":

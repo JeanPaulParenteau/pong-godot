@@ -15,6 +15,7 @@ const AudioFx := preload("res://src/client/audio_fx.gd")
 const OnlineMatch := preload("res://src/client/online_match.gd")
 const ConnectScreen := preload("res://src/client/connect_screen.gd")
 const AutoClient := preload("res://src/client/autoclient.gd")
+const Settings := preload("res://src/client/settings.gd")
 
 var _server: MatchServer = null
 
@@ -54,6 +55,7 @@ func _ready() -> void:
 			lan.start_responder(config.port, "Pong Dedicated Server")
 
 		LaunchConfig.LaunchMode.CLIENT:
+			Settings.apply()  # persisted sound/fullscreen preferences
 			var online := OnlineMatch.new()
 			online.name = "OnlineMatch"
 			add_child(online)
@@ -69,6 +71,8 @@ func _ready() -> void:
 			screen.name = "ConnectScreen"
 			screen.setup(net, online)
 			add_child(screen)
+			if config.has_solo_flag:
+				screen.debug_start_solo()
 
 		LaunchConfig.LaunchMode.AUTO_CLIENT:
 			var online := OnlineMatch.new()
