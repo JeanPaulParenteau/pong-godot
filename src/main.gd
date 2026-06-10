@@ -38,6 +38,11 @@ func _ready() -> void:
 
 	match mode:
 		LaunchConfig.LaunchMode.SERVER:
+			# The sim ticks at 30 Hz; run the headless loop at the same rate so the
+			# server doesn't pay for wakeups it never uses (measured ~1.3% → ~0.6%
+			# of a shared vCPU on the GCP e2-micro). The fixed-step accumulator
+			# absorbs any loop jitter; clients keep the smoother 60.
+			Engine.max_fps = GameConfig.TICK_RATE
 			# Intercept the close request so a quit drains first (window close on
 			# desktop; headless SIGTERM still hard-exits, as it did on Unity).
 			get_tree().auto_accept_quit = false
