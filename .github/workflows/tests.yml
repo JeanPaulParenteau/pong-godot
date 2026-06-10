@@ -1,0 +1,33 @@
+name: tests
+
+# Runs the full suite on every push/PR: 171 logic checks + the UI-layout smoke.
+# The UI smoke is what stops the "Controls at 0×0 / off-screen" class of bug
+# (grey screen, missing menu/Leave button) from reaching a release.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot 4.6.3
+        run: |
+          url=https://github.com/godotengine/godot/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          wget -q "$url" -O godot.zip
+          unzip -q godot.zip
+          mv Godot_v4.6.3-stable_linux.x86_64 godot
+          chmod +x godot
+
+      - name: Import project
+        run: ./godot --headless --path . --import 2>/dev/null || true
+
+      - name: Logic tests
+        run: ./godot --headless --path . --script tests/run_tests.gd
+
+      - name: UI layout smoke
+        run: ./godot --headless --path . --script tests/ui_smoke.gd

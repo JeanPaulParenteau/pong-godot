@@ -44,8 +44,11 @@ godot --path .
 # Dedicated server (windowed close request drains gracefully)
 godot --headless --path . -- --server --port 7777
 
-# Headless unit tests (171 checks)
-godot --headless --path . --script tests/run_tests.gd
+# Full test suite: 171 logic checks + UI-layout smoke (both must pass before shipping)
+GODOT=godot tests/run-all.sh          # or  tests/run-all.ps1  on Windows
+# (individually:)
+godot --headless --path . --script tests/run_tests.gd   # pure logic, 171 checks
+godot --headless --path . --script tests/ui_smoke.gd    # boots the menu, asserts layout
 
 # Headless autoclient (end-to-end smoke: exits 0 only if a real match was seen)
 godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 7777 --quitafter 15
