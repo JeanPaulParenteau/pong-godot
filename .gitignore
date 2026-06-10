@@ -18,3 +18,4 @@ test-results.xml
 # OS
 Thumbs.db
 .DS_Store
+/reports/

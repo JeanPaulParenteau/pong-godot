@@ -1,0 +1,14 @@
+src/client/audio_fx.gd
+src/client/autoclient.gd
+src/client/debug_capture.gd
+src/client/field_view.gd
+src/client/lan_discovery.gd
+src/client/local_match.gd
+src/client/paddle_input.gd
+src/client/palette.gd
+src/client/player_identity.gd
+src/client/settings.gd
+src/main.gd
+src/server/match_server.gd
+src/server/supabase_player_store.gd
+src/shared/match_source.gd

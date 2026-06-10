@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Pre-push hook: block the push if the test suite is red or the coverage gate
+# fails. Install with tests/install-hooks.sh (sets core.hooksPath=hooks).
+# Emergency bypass (avoid): git push --no-verify
+#
+# Godot binary resolution: $GODOT env → `godot` on PATH → the winget install path.
+set -u
+ROOT="$(git rev-parse --show-toplevel)"
+
+if [ -z "${GODOT:-}" ]; then
+  if command -v godot >/dev/null 2>&1; then
+    GODOT="$(command -v godot)"
+  else
+    GODOT="/c/Users/$USER/AppData/Local/Microsoft/WinGet/Packages/GodotEngine.GodotEngine_Microsoft.Winget.Source_8wekyb3d8bbwe/Godot_v4.6.3-stable_win64_console.exe"
+  fi
+fi
+
+echo "[pre-push] running tests + coverage gate (override with GODOT=...; skip with --no-verify)..."
+
+if ! GODOT="$GODOT" bash "$ROOT/tests/run-all.sh"; then
+  echo "[pre-push] test suite is RED — push blocked."
+  exit 1
+fi
+if ! bash "$ROOT/tests/check-tested.sh"; then
+  echo "[pre-push] coverage gate FAILED — push blocked."
+  exit 1
+fi
+
+echo "[pre-push] green — pushing."

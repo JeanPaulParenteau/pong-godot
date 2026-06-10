@@ -26,8 +26,8 @@ jobs:
       - name: Import project
         run: ./godot --headless --path . --import 2>/dev/null || true
 
-      - name: Logic tests
-        run: ./godot --headless --path . --script tests/run_tests.gd
+      - name: Test suite (logic + GdUnit4 UI/layout)
+        run: GODOT="$PWD/godot" bash tests/run-all.sh
 
-      - name: UI layout smoke
-        run: ./godot --headless --path . --script tests/ui_smoke.gd
+      - name: Per-file test gate
+        run: bash tests/check-tested.sh
