@@ -5,7 +5,11 @@
 
 const PlayerHandshake := preload("res://src/shared/player_handshake.gd")
 
-const FILE_PATH := "user://identity.cfg"
+# Where the identity persists. A var (not const) so tests can point it at a
+# throwaway file — regenerating the REAL id on a dev machine would change who
+# that install is on the leaderboard.
+static var file_path := "user://identity.cfg"
+
 const SECTION := "player"
 
 
@@ -16,7 +20,7 @@ static func player_id() -> String:
 	if id.is_empty():
 		id = _new_guid()
 		cfg.set_value(SECTION, "id", id)
-		cfg.save(FILE_PATH)
+		cfg.save(file_path)
 	return id
 
 
@@ -29,7 +33,7 @@ static func display_name() -> String:
 static func set_display_name(value: String) -> void:
 	var cfg := _load()
 	cfg.set_value(SECTION, "name", PlayerHandshake.sanitize_name(value))
-	cfg.save(FILE_PATH)
+	cfg.save(file_path)
 
 
 ## The handshake to send on connect.
@@ -39,7 +43,7 @@ static func current():  # -> PlayerHandshake
 
 static func _load() -> ConfigFile:
 	var cfg := ConfigFile.new()
-	cfg.load(FILE_PATH)  # missing file is fine — treated as empty
+	cfg.load(file_path)  # missing file is fine — treated as empty
 	return cfg
 
 

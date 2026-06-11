@@ -2,7 +2,10 @@
 ## applied through the engine in one place. Read by the menu's toggle buttons;
 ## applied once at client startup and on every change.
 
-const FILE_PATH := "user://settings.cfg"
+# Where settings persist. A var (not const) so tests can point it at a throwaway
+# file instead of the player's real settings.cfg.
+static var file_path := "user://settings.cfg"
+
 const SECTION := "client"
 
 
@@ -36,11 +39,11 @@ static func apply() -> void:
 
 static func _load() -> ConfigFile:
 	var cfg := ConfigFile.new()
-	cfg.load(FILE_PATH)  # missing file is fine — treated as defaults
+	cfg.load(file_path)  # missing file is fine — treated as defaults
 	return cfg
 
 
 static func _save(key: String, value) -> void:
 	var cfg := _load()
 	cfg.set_value(SECTION, key, value)
-	cfg.save(FILE_PATH)
+	cfg.save(file_path)
