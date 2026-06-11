@@ -1,6 +1,3 @@
-src/client/audio_fx.gd
-src/client/autoclient.gd
-src/client/debug_capture.gd
 src/main.gd
 src/server/match_server.gd
 src/server/supabase_player_store.gd
