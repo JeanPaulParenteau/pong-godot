@@ -130,7 +130,7 @@ func handle_hello(peer_id: int, payload: String) -> void:
 
 	# Draining: the server is going away — turn everyone away with the "restarting" reason.
 	if _draining:
-		_refuse(peer_id, GameConfig.SERVER_DRAINING_REASON)
+		_net.refuse(peer_id, GameConfig.SERVER_DRAINING_REASON)
 		return
 
 	if payload == GameConfig.SPECTATOR_TOKEN:
@@ -141,7 +141,7 @@ func handle_hello(peer_id: int, payload: String) -> void:
 	if not placement["accepted"]:
 		print("[MatchServer] Rejected client %d: server full (match cap reached, active matches: %d)."
 				% [peer_id, _matches.size()])
-		_refuse(peer_id, GameConfig.SERVER_FULL_REASON)
+		_net.refuse(peer_id, GameConfig.SERVER_FULL_REASON)
 		return
 
 	# Remember the Player behind this connection for the ranked update at match end,
@@ -157,7 +157,7 @@ func handle_hello(peer_id: int, payload: String) -> void:
 	if side == GameTypes.NO_SIDE:
 		# Shouldn't happen (roster capped the seats), but never strand a client.
 		_roster.release(peer_id)
-		_refuse(peer_id, GameConfig.SERVER_FULL_REASON)
+		_net.refuse(peer_id, GameConfig.SERVER_FULL_REASON)
 		return
 
 	m["participants"][peer_id] = side
@@ -174,10 +174,6 @@ func handle_input(peer_id: int, target_y: float) -> void:
 	var m: Dictionary = _matches[match_id]
 	if m["participants"].has(peer_id):
 		m["session"].set_input(m["participants"][peer_id], target_y)
-
-
-func _refuse(peer_id: int, reason: String) -> void:
-	_net.refuse(peer_id, reason)
 
 
 func _ensure_match(match_id: int) -> Dictionary:
@@ -355,7 +351,7 @@ func begin_drain() -> void:
 	print("[MatchServer] Draining: refusing new connections; dropping spectators and "
 			+ "waiting players; active matches will finish.")
 	for spec in _spectators.keys():
-		_refuse(spec, GameConfig.SERVER_DRAINING_REASON)
+		_net.refuse(spec, GameConfig.SERVER_DRAINING_REASON)
 	_drop_waiting_clients()
 
 
@@ -365,7 +361,7 @@ func _drop_waiting_clients() -> void:
 	for client_id in _roster.clients_awaiting_opponent():
 		if not _drain_notified.has(client_id):
 			_drain_notified[client_id] = true
-			_refuse(client_id, GameConfig.SERVER_DRAINING_REASON)
+			_net.refuse(client_id, GameConfig.SERVER_DRAINING_REASON)
 
 
 ## Survivors appear as active matches lose a player; they can't be re-paired during
