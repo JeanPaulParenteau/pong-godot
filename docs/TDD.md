@@ -30,8 +30,7 @@ GODOT=/path/to/godot tests/run-all.sh    # or  tests/run-all.ps1
 
 | Location | What | Framework |
 | --- | --- | --- |
-| `tests/gdunit/**_test.gd` | **all new tests go here**, test-first | [GdUnit4](https://github.com/godot-gdunit-labs/gdUnit4) |
-| `tests/run_tests.gd` | legacy logic harness (171 checks) | hand-rolled `check()` — **being migrated to GdUnit4**, don't add to it |
+| `tests/gdunit/**_test.gd` | **all tests live here**, test-first | [GdUnit4](https://github.com/godot-gdunit-labs/gdUnit4) |
 
 New behaviour → a new or existing GdUnit4 suite under `tests/gdunit/`. A GdUnit4
 suite is `extends GdUnitTestSuite`, one `func test_*()` per behaviour, fluent
@@ -70,8 +69,9 @@ TDD is a discipline; these make skipping it cost something:
   with no test fails the gate, which is the mechanical nudge to write the test
   first.
 
-## Migration
+## Migration (done)
 
-`tests/run_tests.gd` predates the framework. It still runs (and guards the existing
-code), but it's frozen: port a chunk into a GdUnit4 suite whenever you touch the
-code it covers, and delete the ported checks from it. The goal is one framework.
+The hand-rolled `tests/run_tests.gd` harness that predated the framework has been
+fully ported into per-module GdUnit4 suites and deleted — one framework. The
+per-file gate's allowlist (`tests/untested-allowlist.txt`) is empty: every
+`src/**` script is referenced by a test, and a new file without one fails CI.

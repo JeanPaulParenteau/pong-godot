@@ -20,6 +20,11 @@ func test_expected_win_earns_little() -> void:
 	assert_int(r[0] - 400).is_less(16)
 
 
+func test_an_upset_earns_more_than_half_k() -> void:
+	var r := EloRating.after_win(0, 400)
+	assert_int(r[0]).is_greater(16)
+
+
 func test_elo_is_zero_sum() -> void:
 	var r := EloRating.after_win(0, 400)
 	assert_int(r[0] - 0).is_equal(-(r[1] - 400))

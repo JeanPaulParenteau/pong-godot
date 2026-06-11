@@ -65,7 +65,7 @@ godot --headless --path . -- --autoclient --smoke --address 127.0.0.1 --port 779
 
 The dev loop, fastest first:
 
-1. **Headless unit tests** (`tests/run_tests.gd`, ~2 s) — pure sim/bot/Elo/netcode/FX logic.
+1. **Headless unit tests** (`tests/run-all.sh|ps1` → GdUnit4, seconds) — sim/bot/Elo/netcode/FX/UI-layout/server logic; every `src/**` script is covered (see `docs/TDD.md`).
 2. **Headless smoke** — the server + autoclient commands above; real ENet sockets, exit codes.
 3. **Desktop run** — `godot --path .` (add `-- --solo` to jump straight into a vs-CPU match).
 4. **Android emulator** — `adb install` + `am start` + `input tap/swipe`; drive and observe.
