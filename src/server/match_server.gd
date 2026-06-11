@@ -42,16 +42,27 @@ var _spectators := {}         # peer_id -> true (set)
 var _spectator_showing := {}  # peer_id -> match_id
 
 # Graceful drain: once draining, refuse new connections, drop spectators and
-# lone survivors, let two-player matches finish, then quit.
+# lone survivors, let two-player matches finish, then announce completion (the
+# entry point owns the actual process quit).
 var _draining := false
 var _drain_notified := {}  # peer_id -> true
+var _drain_announced := false
+
+## Emitted once when a drain has nothing left to wait for; main.gd quits on it.
+signal drain_finished
 
 
-func start(net: Node, port: int, max_matches := 0, store = null) -> bool:
+## Wire the collaborators (no networking). Tests stop here, with a fake net;
+## production continues into listen().
+func configure(net: Node, max_matches := 0, store = null) -> void:
 	_net = net
 	net.server = self
 	_roster = MatchRoster.new(1, max_matches)  # 0 = unlimited
 	_store = store if store != null else PlayerStore.new()
+
+
+func start(net: Node, port: int, max_matches := 0, store = null) -> bool:
+	configure(net, max_matches, store)
 
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_server(port)
@@ -150,7 +161,7 @@ func handle_hello(peer_id: int, payload: String) -> void:
 		return
 
 	m["participants"][peer_id] = side
-	_net.rpc_id(peer_id, "client_assign_side", side)
+	_net.send_assign_side(peer_id, side)
 	print("[MatchServer] Client %d -> match %d as %s paddle (active matches: %d)." % [
 		peer_id, placement["match_id"],
 		"Left" if side == GameTypes.PlayerSide.LEFT else "Right", _matches.size()])
@@ -166,12 +177,7 @@ func handle_input(peer_id: int, target_y: float) -> void:
 
 
 func _refuse(peer_id: int, reason: String) -> void:
-	_net.rpc_id(peer_id, "client_refused", reason)
-	# Give the refusal RPC a beat to flush before closing the connection.
-	get_tree().create_timer(0.25).timeout.connect(func() -> void:
-		var mp_peer := multiplayer.multiplayer_peer
-		if mp_peer != null and peer_id in multiplayer.get_peers():
-			mp_peer.disconnect_peer(peer_id))
+	_net.refuse(peer_id, reason)
 
 
 func _ensure_match(match_id: int) -> Dictionary:
@@ -207,7 +213,7 @@ func _process(delta: float) -> void:
 
 
 func _tick_all() -> void:
-	var connected := multiplayer.get_peers()
+	var connected: PackedInt32Array = _net.connected_peers()
 	for match_id in _matches:
 		var m: Dictionary = _matches[match_id]
 		m["session"].tick(_tick_dt)
@@ -223,10 +229,10 @@ func _publish(match_id: int, m: Dictionary, connected: PackedInt32Array) -> void
 	var wire: Array = MatchSnapshot.from_session(m["session"], match_id, m["tick"]).to_wire()
 	for peer_id in m["participants"]:
 		if peer_id in connected:
-			_net.rpc_id(peer_id, "client_snapshot", wire)
+			_net.send_snapshot(peer_id, wire)
 	for spec in _spectator_showing:
 		if _spectator_showing[spec] == match_id and spec in connected:
-			_net.rpc_id(spec, "client_snapshot", wire)
+			_net.send_snapshot(spec, wire)
 
 
 ## Record the ranked result exactly once when a game reaches a winning score.
@@ -295,9 +301,7 @@ func _sweep_pending(delta: float) -> void:
 			stale.append(peer_id)
 	for peer_id in stale:
 		_pending.erase(peer_id)
-		var mp_peer := multiplayer.multiplayer_peer
-		if mp_peer != null and peer_id in multiplayer.get_peers():
-			mp_peer.disconnect_peer(peer_id)
+		_net.kick(peer_id)
 
 
 # -------------------------------------------------------------------
@@ -366,9 +370,11 @@ func _drop_waiting_clients() -> void:
 
 ## Survivors appear as active matches lose a player; they can't be re-paired during
 ## a drain, so drop them too. Once no matches (and no spectators) remain, the drain
-## is done — quit so a redeploy can bring the new server up on the same port.
+## is done — announce it (once); main.gd quits so a redeploy can bring the new
+## server up on the same port.
 func _drain_step() -> void:
 	_drop_waiting_clients()
-	if _roster.match_count() == 0 and _spectators.is_empty():
-		print("[MatchServer] Drain complete — no matches remain; quitting.")
-		get_tree().quit(0)
+	if not _drain_announced and _roster.match_count() == 0 and _spectators.is_empty():
+		_drain_announced = true
+		print("[MatchServer] Drain complete — no matches remain.")
+		drain_finished.emit()

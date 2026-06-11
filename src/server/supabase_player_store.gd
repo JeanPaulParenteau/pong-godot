@@ -19,6 +19,11 @@ var _host: Node  # parent for HTTPRequest nodes
 var _cache := {}  # player_id -> PlayerRecord
 var _ready := {}  # player_id -> true (set)
 
+# The seam for one outgoing call: returns a node shaped like HTTPRequest
+# (request() + request_completed). Tests swap in a fake so the REST/cache rules
+# are testable without sockets; unset = the real thing.
+var _request_factory := Callable()
+
 
 func _init(host: Node, url: String, service_key: String) -> void:
 	_host = host
@@ -87,8 +92,8 @@ func save_record(record) -> void:
 		req.queue_free()
 
 
-func _make_request() -> HTTPRequest:
-	var req := HTTPRequest.new()
+func _make_request() -> Node:
+	var req: Node = _request_factory.call() if _request_factory.is_valid() else HTTPRequest.new()
 	_host.add_child(req)
 	return req
 

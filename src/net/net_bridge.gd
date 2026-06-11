@@ -33,6 +33,40 @@ func server_submit_input(target_y: float) -> void:
 		server.handle_input(multiplayer.get_remote_sender_id(), target_y)
 
 
+# ---- server-side send surface ----
+# MatchServer talks to clients only through these, so the wire method names and
+# transport quirks (flush timing, peer enumeration, force-disconnects) live here.
+# Tests substitute a fake with the same five methods — the second adapter that
+# makes this seam real.
+
+## Peers currently connected (publish targets are filtered against this).
+func connected_peers() -> PackedInt32Array:
+	return multiplayer.get_peers()
+
+
+func send_assign_side(peer_id: int, side: int) -> void:
+	rpc_id(peer_id, "client_assign_side", side)
+
+
+func send_snapshot(peer_id: int, wire: Array) -> void:
+	rpc_id(peer_id, "client_snapshot", wire)
+
+
+## Refuse a connection: send the reason, then disconnect — after a beat, so the
+## reliable RPC flushes before the channel closes.
+func refuse(peer_id: int, reason: String) -> void:
+	rpc_id(peer_id, "client_refused", reason)
+	get_tree().create_timer(0.25).timeout.connect(func() -> void:
+		kick(peer_id))
+
+
+## Force-disconnect a peer (hello timeout, post-refusal close).
+func kick(peer_id: int) -> void:
+	var mp_peer := multiplayer.multiplayer_peer
+	if mp_peer != null and peer_id in multiplayer.get_peers():
+		mp_peer.disconnect_peer(peer_id)
+
+
 # ---- server → client ----
 
 ## Tell one specific client which paddle it controls (drives prediction).

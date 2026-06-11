@@ -32,7 +32,12 @@ func _ready() -> void:
 	var is_headless := DisplayServer.get_name() == "headless"
 	var mode: int = config.resolve_mode(is_headless)
 	print("[Main] Starting in %s mode." % ["Client", "Server", "AutoClient"][mode])
+	_build(mode, config)
 
+
+## Compose the node graph for one launch mode. Split from _ready so tests can
+## build a mode with a crafted config instead of the process command line.
+func _build(mode: int, config) -> void:
 	var net := NetBridge.new()
 	net.name = "Net"  # RPC path must match on client and server: /root/Main/Net
 	add_child(net)
@@ -50,6 +55,8 @@ func _ready() -> void:
 			_server = MatchServer.new()
 			_server.name = "MatchServer"
 			add_child(_server)
+			# The server announces drain completion; process lifetime is decided here.
+			_server.drain_finished.connect(func() -> void: get_tree().quit(0))
 			# Persist ranked results to Supabase when configured; otherwise the
 			# in-memory store keeps everything working (ratings reset on restart).
 			var store = SupabasePlayerStore.try_create(_server)
@@ -102,6 +109,6 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		if _server != null and not _server.is_draining():
-			_server.begin_drain()  # _drain_step quits once nothing remains
+			_server.begin_drain()  # drain_finished quits once nothing remains
 		else:
 			get_tree().quit()

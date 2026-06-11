@@ -1,3 +1,0 @@
-src/main.gd
-src/server/match_server.gd
-src/server/supabase_player_store.gd
