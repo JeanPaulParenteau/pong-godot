@@ -77,10 +77,12 @@ func test_clear_wipes_all_fx() -> void:
 	assert_int(fx.rally).is_equal(0)
 
 
-func test_heat_maps_launch_speed_to_zero_and_the_cap_to_one() -> void:
+func test_heat_maps_launch_speed_to_zero_and_the_reference_speed_to_one() -> void:
 	assert_float(FxState.heat(GameConfig.BALL_BASE_SPEED)).is_equal_approx(0.0, 1e-4)
-	assert_float(FxState.heat(GameConfig.BALL_MAX_SPEED)).is_equal_approx(1.0, 1e-4)
+	assert_float(FxState.heat(GameConfig.BALL_HEAT_REF_SPEED)).is_equal_approx(1.0, 1e-4)
 	assert_float(FxState.heat(0.0)).is_equal_approx(0.0, 1e-4)  # clamps below
+	# The ball is uncapped: speed past the reference just saturates heat at 1.
+	assert_float(FxState.heat(GameConfig.BALL_HEAT_REF_SPEED * 3.0)).is_equal_approx(1.0, 1e-4)
 
 
 func test_match_point_lights_at_win_minus_one_for_either_side() -> void:

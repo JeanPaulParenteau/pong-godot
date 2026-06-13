@@ -25,10 +25,11 @@ func _init(p_max_speed: float, p_react_delay: float, p_aim_error: float,
 	predict_intercept = p_predict_intercept
 
 
-# Tuned against the current ball (BALL_BASE_SPEED 7, step 1.2, cap 16 — rallies ramp to
-# the cap in ~8 hits) and the capped player paddle (PADDLE_SPEED 16). max_speed values
-# scale up with the faster ball so Easy/Medium still keep pace early but get out-run as
-# rallies peak; Hard sits just under the player's cap. aim_error stays <= PADDLE_HALF_HEIGHT
+# Tuned against the current ball (BALL_BASE_SPEED 7, step 1.2, UNCAPPED — speed keeps
+# climbing for as long as the rally lasts) and the capped player paddle (PADDLE_SPEED 16).
+# The bot's max_speed (≤ 15, Hard) sits under the paddle cap, so a long rally eventually
+# out-runs even Hard — that's intended: out-rallying the CPU is the reward. Easy/Medium keep
+# pace early but fall behind sooner. aim_error stays <= PADDLE_HALF_HEIGHT
 # (0.9) on every tier, and the committed aim is additionally edge-biased (PongBot.edge_safe_aim)
 # so even the worst sample keeps the bot's intended contact on the front face — it concedes
 # by being slow/late or fooled by angles, not by clipping its own paddle edge into a

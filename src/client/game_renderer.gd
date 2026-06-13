@@ -20,8 +20,8 @@ const MatchEvents := preload("res://src/client/match_events.gd")
 const FxState := preload("res://src/client/fx_state.gd")
 
 const INTERP_DELAY := 0.10  # render remote state this far in the past
-const TRAIL_LENGTH := 10
-const HOT_BALL := Color(1.0, 0.55, 0.25)  # tint as the ball approaches the speed cap
+const TRAIL_LENGTH := 14
+const HOT_BALL := Color(1.0, 0.55, 0.25)  # tint as the ball heats up (uncapped speed)
 
 var _buffer := SnapshotBuffer.new()
 var _predictor := PaddlePredictor.new()
@@ -206,13 +206,16 @@ func _draw_field() -> void:
 
 func _draw_particles(shake: Vector2) -> void:
 	var ppu := FieldView.pixels_per_unit()
+	# Each confetti square is drawn through its own rotated transform, so override the
+	# field transform per particle (folding `shake` into the translation) and restore it.
 	for p in _fx.particles:
 		var t: float = p["life"] / p["max_life"]  # 1 → fresh, 0 → expired
 		var c: Color = p["color"]
-		var px := FieldView.world_to_screen(p["pos"])
-		var s: float = p["size"] * ppu * (0.5 + 0.5 * t)
-		draw_rect(Rect2(px.x - s * 0.5, px.y - s * 0.5, s, s), Color(c.r, c.g, c.b, 0.7 * t))
-	# (shake is already applied via the canvas transform; parameter kept for clarity)
+		var px := FieldView.world_to_screen(p["pos"]) + shake
+		var s: float = p["size"] * ppu * (0.45 + 0.55 * t)
+		draw_set_transform(px, p["rot"], Vector2.ONE)
+		draw_rect(Rect2(-s * 0.5, -s * 0.5, s, s), Color(c.r, c.g, c.b, 0.85 * t))
+	draw_set_transform(shake)  # restore the shaken field transform for whatever draws next
 
 
 func _draw_trail() -> void:
@@ -221,8 +224,10 @@ func _draw_trail() -> void:
 	var n := _trail.size()
 	for i in n:
 		var a := float(i) / maxi(1, n)  # oldest first → most faded
-		var ball_size := GameConfig.BALL_RADIUS * 2.0 * (0.3 + 0.6 * a)
-		_draw_world_rect(_trail[i], ball_size, ball_size, Color(c.r, c.g, c.b, 0.05 + 0.18 * a))
+		# Hotter rallies leave a fatter, brighter comet tail.
+		var ball_size := GameConfig.BALL_RADIUS * 2.0 * (0.3 + 0.6 * a) * (1.0 + 0.5 * heat)
+		_draw_world_rect(_trail[i], ball_size, ball_size,
+				Color(c.r, c.g, c.b, (0.05 + 0.18 * a) * (1.0 + 0.7 * heat)))
 
 
 ## The ball with a soft two-layer glow halo, tinted hotter as it approaches the
@@ -276,15 +281,23 @@ func _draw_score(left: int, right: int, me_right: bool) -> void:
 			half - pad, fs, right_col)
 
 
-## A long rally is worth celebrating: counter fades in from RALLY_SHOW_MIN hits.
+## A long rally is the headline: the counter fades in from RALLY_SHOW_MIN hits, pops on
+## each contact, grows as the rally stretches, and heats from white through to hot orange
+## as the ball speeds up.
 func _draw_rally() -> void:
 	if _latest.state != GameTypes.GameState.PLAYING or _fx.rally < FxState.RALLY_SHOW_MIN:
 		return
 	var font := ThemeDB.fallback_font
 	var heat := FxState.heat(_view.ball_velocity.length())
-	var col := Color(1, 1, 1, 0.35).lerp(Color(1.0, 0.7, 0.3, 0.85), heat)
-	draw_string(font, Vector2(0, 100), "RALLY  ×%d" % _fx.rally,
-			HORIZONTAL_ALIGNMENT_CENTER, size.x, 20, col)
+	var col := Color(1, 1, 1, 0.9).lerp(Color(1.0, 0.55, 0.2, 1.0), heat)
+	# Punch on each hit (rally_pulse) plus a slow grow with the rally length.
+	var fs := int(22.0 * (1.0 + 0.5 * _fx.rally_pulse + 0.02 * _fx.rally))
+	var text := "RALLY  ×%d" % _fx.rally
+	var y := 104.0
+	# Drop shadow keeps it legible over the field and the white score flash.
+	draw_string(font, Vector2(0, y + 2.0), text, HORIZONTAL_ALIGNMENT_CENTER, size.x, fs,
+			Color(0, 0, 0, 0.35))
+	draw_string(font, Vector2(0, y), text, HORIZONTAL_ALIGNMENT_CENTER, size.x, fs, col)
 
 
 func _draw_banner(snap, local_side: int) -> void:

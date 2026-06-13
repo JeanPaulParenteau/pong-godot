@@ -277,8 +277,9 @@ func _resolve_paddle(pos: Vector2, vel: Vector2, prev: Vector2, paddle_y: float,
 
 ## Reflect X, deflect Y by hit offset (edge hits = sharper angle), add spin from the
 ## paddle's motion (a paddle moving up/down carries the ball that way), and speed up by
-## a fixed step capped at the max. The angle is bounded so the ball always advances
-## horizontally and the speed stays exactly at the cap — spin changes direction, not speed.
+## a fixed step — UNCAPPED, so a sustained rally keeps getting faster with no plateau.
+## The angle is bounded so the ball always advances horizontally; spin changes the
+## direction, never the speed.
 static func _bounce_off_paddle(vel: Vector2, ball_y: float, paddle_y: float,
 		paddle_vel: float, moving_right: bool) -> Vector2:
 	var offset := clampf((ball_y - paddle_y) / GameConfig.PADDLE_HALF_HEIGHT, -1.0, 1.0)
@@ -287,7 +288,7 @@ static func _bounce_off_paddle(vel: Vector2, ball_y: float, paddle_y: float,
 			-GameConfig.MAX_SPIN_ANGLE_DEG, GameConfig.MAX_SPIN_ANGLE_DEG)
 	var angle := deg_to_rad(clampf(offset_deg + spin_deg,
 			-GameConfig.MAX_TOTAL_BOUNCE_ANGLE_DEG, GameConfig.MAX_TOTAL_BOUNCE_ANGLE_DEG))
-	var new_speed := minf(vel.length() + GameConfig.BALL_SPEED_STEP, GameConfig.BALL_MAX_SPEED)
+	var new_speed := vel.length() + GameConfig.BALL_SPEED_STEP  # uncapped: rallies never plateau
 	var dir_x := 1.0 if moving_right else -1.0
 	var dir := Vector2(dir_x * cos(angle), sin(angle))
 	return dir.normalized() * new_speed
@@ -300,7 +301,7 @@ static func _edge_deflect(vel: Vector2, dy: float) -> Vector2:
 	var v_sign := 1.0 if dy >= 0.0 else -1.0   # push up off the top tip, down off the bottom tip
 	var x_sign := 1.0 if vel.x >= 0.0 else -1.0  # keep heading toward the goal behind the paddle
 	var angle := deg_to_rad(GameConfig.EDGE_DEFLECT_ANGLE_DEG)
-	var new_speed := minf(vel.length() + GameConfig.BALL_SPEED_STEP, GameConfig.BALL_MAX_SPEED)
+	var new_speed := vel.length() + GameConfig.BALL_SPEED_STEP  # uncapped, same as the front-face bounce
 	var dir := Vector2(x_sign * cos(angle), v_sign * sin(angle))
 	return dir.normalized() * new_speed
 

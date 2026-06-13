@@ -30,8 +30,15 @@ const FIELD_HALF_HEIGHT := 4.5  # top/bottom extent (16:9-ish)
 # --- Ball ---
 const BALL_RADIUS := 0.2
 const BALL_BASE_SPEED := 7.0      # launch speed
-const BALL_SPEED_STEP := 1.2      # added per paddle hit (rallies ramp up fast)
-const BALL_MAX_SPEED := 16.0      # hard cap
+const BALL_SPEED_STEP := 1.2      # added per paddle hit — UNCAPPED, so a rally keeps
+                                  # accelerating with no plateau (rallies are the headline).
+                                  # The swept paddle collision (see GameSession._step_ball)
+                                  # catches the face crossing at any speed, so there's no
+                                  # tunnelling to guard against by capping.
+const BALL_HEAT_REF_SPEED := 22.0 # the speed at which visual "heat" (tint / squash / shake /
+                                  # particle intensity) saturates at 1.0. NOT a speed clamp:
+                                  # the ball has no max speed; this only normalises the 0→1
+                                  # heat the renderer + FxState read (≈ a 12-hit rally).
 const MAX_BOUNCE_ANGLE_DEG := 55.0   # front-face deflection from horizontal
 const EDGE_DEFLECT_ANGLE_DEG := 50.0 # glance angle when the ball clips a paddle's top/bottom corner
 const SERVE_SPREAD_DEG := 25.0       # random vertical spread at serve

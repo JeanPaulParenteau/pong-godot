@@ -192,9 +192,11 @@ func test_offset_plus_spin_clamps_at_the_total_angle_cap() -> void:
 	assert_float(rad_to_deg(atan2(v.y, -v.x))).is_equal_approx(GameConfig.MAX_TOTAL_BOUNCE_ANGLE_DEG, 0.01)
 
 
-func test_bounce_speed_clamps_at_the_max() -> void:
-	var v: Vector2 = GameSession._bounce_off_paddle(Vector2(15.5, 0.0), 0.0, 0.0, 0.0, false)
-	assert_float(v.length()).is_equal_approx(GameConfig.BALL_MAX_SPEED, 1e-3)
+func test_bounce_speed_is_uncapped_so_rallies_never_plateau() -> void:
+	# Well past the old hard cap: the ball must still gain exactly one step — there is no
+	# ceiling, so a sustained rally keeps accelerating.
+	var v: Vector2 = GameSession._bounce_off_paddle(Vector2(40.0, 0.0), 0.0, 0.0, 0.0, false)
+	assert_float(v.length()).is_equal_approx(40.0 + GameConfig.BALL_SPEED_STEP, 1e-3)
 
 
 func test_edge_deflect_pushes_off_the_tip_keeping_the_heading() -> void:
