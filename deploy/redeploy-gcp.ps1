@@ -5,9 +5,9 @@
   binary, (re)installs the systemd service on port 7778 via gcp-setup.sh, then
   runs a 2-autoclient online smoke against the live server.
 
-  Coexists with the legacy Unity server on 7777 — this touches only port 7778 and
-  the pong-godot.service unit, so existing Unity players are unaffected. Open the
-  firewall for udp/7778 once (see DEPLOY.md) before the first client connects.
+  Touches only port 7778 and the pong-godot.service unit. The udp/7778 firewall
+  rule is already in place (see DEPLOY.md); the legacy Unity server that once
+  shared this VM was retired 2026-06-10.
 
   Any netcode/sim change must ship the APK AND this server in lockstep, or online
   desyncs (stale server vs current client).

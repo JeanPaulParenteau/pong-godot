@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Runs ON the VM. Installs/updates the Pong (Godot) dedicated server as a systemd
-# service on port 7778 (coexisting with the legacy Unity server on 7777). If a
-# freshly-uploaded binary is staged at ~/srv/PongServer.x86_64, it is moved into
-# ~/pong-godot first. Idempotent — safe to re-run.
+# service on port 7778. If a freshly-uploaded binary is staged at
+# ~/srv/PongServer.x86_64, it is moved into ~/pong-godot first. Idempotent — safe
+# to re-run.
 set -euo pipefail
 
 PORT="${PONG_GODOT_PORT:-7778}"

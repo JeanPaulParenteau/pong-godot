@@ -162,10 +162,10 @@ persist to `user://settings.cfg` and apply through one `Settings.apply()`.
 
 ## Known gaps / follow-ups
 
-- The production GCP address constant points at the **Unity** server; the
-  transports are incompatible. Deploy this server build before shipping the
-  Godot client to players (the deploy scripts in the original repo need a
-  Godot export preset + Linux headless build — not part of this port).
+- ~~Production server / deploy~~ — **resolved.** The Godot dedicated server is
+  deployed and live at `34.53.62.38:7778` (the client's default target via
+  `PRODUCTION_SERVER_PORT`); the legacy Unity server that shared the VM was
+  retired 2026-06-10. Full pipeline in [deploy/DEPLOY.md](../deploy/DEPLOY.md).
 - Spectator "leave the idle match" routing exists server-side, but a spectator
   watching the *only* match going idle simply stops receiving snapshots; the
   client falls back to the waiting screen after a 2 s starvation timeout
@@ -229,5 +229,6 @@ to see the running game on-device.
 
 - The Android APK is a **debug** build (Godot debug keystore). A Play-store release
   needs a release keystore + AAB; the preset is one `export-release` away.
-- Online play from the APK still needs a deployed **Godot** server (the GCP box runs
-  Unity); see the server-deploy discussion. LAN and vs-CPU work offline today.
+- Online play is served by the live **Godot** dedicated server (`34.53.62.38:7778`,
+  the client default); the legacy Unity server that shared the GCP box was retired
+  2026-06-10 (see [deploy/DEPLOY.md](../deploy/DEPLOY.md)). LAN and vs-CPU work offline.

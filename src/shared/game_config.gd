@@ -7,9 +7,9 @@
 const DEFAULT_PORT := 7777
 const DEFAULT_CLIENT_ADDRESS := "127.0.0.1"
 # The live cloud dedicated server. Prefilled as the client's default target.
-# The Godot server coexists with the legacy Unity server on the same VM: Unity
-# owns udp/7777, Godot owns udp/7778 (see deploy/DEPLOY.md) — hence the
-# non-default production port here.
+# Port 7778 dates from the transition when the Godot server ran alongside the
+# legacy Unity server (udp/7777) on the same VM; the Unity server was retired
+# 2026-06-10 (see deploy/DEPLOY.md) and 7778 stayed to avoid rev'ing shipped clients.
 const PRODUCTION_SERVER_ADDRESS := "34.53.62.38"
 const PRODUCTION_SERVER_PORT := 7778
 const TICK_RATE := 30

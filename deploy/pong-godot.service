@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 # Godot needs --headless, and project args come after a literal `--`.
-# Port 7778 so this coexists with the legacy Unity server on 7777 (see DEPLOY.md).
+# Port 7778 (chosen to coexist with the now-retired Unity server on 7777; see DEPLOY.md).
 ExecStart=/home/ubuntu/pong-godot/PongServer.x86_64 --headless -- --server --port 7778
 WorkingDirectory=/home/ubuntu/pong-godot
 User=ubuntu

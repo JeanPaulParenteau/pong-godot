@@ -21,20 +21,22 @@ coexist layout used during the transition (and what rollback would restore).
 | Install dir | `~/pong` | `~/pong-godot` |
 | Binary | `PongServer.x86_64` (+ `UnityPlayer.so`) | `PongServer.x86_64` (single, embedded PCK) |
 
-Both run on the same VM (`pong-server`, `us-west1-b`, static IP `34.53.62.38`).
-Decommission the Unity unit only once the Godot client fully supersedes it; until
-then they don't interact.
+Both ran on the same VM (`pong-server`, `us-west1-b`, static IP `34.53.62.38`)
+during the transition. The Unity unit has since been decommissioned (2026-06-10,
+see the status note at the top); only `pong-godot.service` runs now. The table
+above is kept as the record of what rollback would restore.
 
 ## One-time setup
 
-1. **Firewall** — allow the Godot port (the VM already allows udp/7777 for Unity):
+1. **Firewall** — allow the Godot port:
    ```sh
    gcloud compute firewall-rules create pong-godot-udp \
      --project pong-497801 --direction INGRESS --action ALLOW \
      --rules udp:7778 --target-tags pong-server
    ```
-   (Adjust `--target-tags`/network to match the existing `pong` rule;
-   `gcloud compute firewall-rules list` shows how the Unity rule is scoped.)
+   (Already created as `allow-pong-godot-udp`; shown here for reference / rebuild.
+   `gcloud compute firewall-rules list` shows the current rules. The old udp/7777
+   Unity rule was deleted at retirement.)
 
 2. **Ranked persistence (optional)** — to keep Elo across restarts, create
    `~/pong-godot.env` on the VM:
@@ -65,10 +67,11 @@ Run it on any Linux host directly with `deploy/run-server.sh [port]`.
 
 ## Point the client at it
 
-In `src/shared/game_config.gd`, `PRODUCTION_SERVER_ADDRESS` is the default target
-IP and `DEFAULT_PORT` is 7777. For the coexist server, either bump `DEFAULT_PORT`
-to 7778, or players use the **Custom server** field (IP `34.53.62.38`, port `7778`).
-LAN and vs-CPU need no server.
+The client already targets this server: in `src/shared/game_config.gd`,
+`PRODUCTION_SERVER_ADDRESS` / `PRODUCTION_SERVER_PORT` are `34.53.62.38` / `7778`,
+which is the **Play Online** default. `DEFAULT_PORT` (7777) is only the local
+`--server`/LAN default, unrelated to the production target. Players can still
+override via the **Custom server** field. LAN and vs-CPU need no server.
 
 ## Files
 

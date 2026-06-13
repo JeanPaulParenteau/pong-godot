@@ -94,8 +94,8 @@ no flag) for shipping and **"Android Emu"** (x86_64 + capture) for the emulator.
 [deploy/](deploy/) holds the full GCP deploy pipeline, mirroring the Unity
 original's: `redeploy-gcp.ps1` exports the Linux server (single embedded-PCK
 binary), uploads it, installs the `pong-godot.service` systemd unit on **UDP
-7778** — coexisting with the legacy Unity server on 7777 — and gates the deploy
-on a 2-autoclient online smoke against the live server. One-time firewall setup
+7778**, and gates the deploy on a 2-autoclient online smoke against the live
+server. One-time firewall setup
 and the lockstep client/server rule are in [deploy/DEPLOY.md](deploy/DEPLOY.md).
 `deploy/local-wsl-smoke.sh` verifies the exported Linux artifact end-to-end
 under WSL before any VM is touched.
@@ -168,10 +168,11 @@ The layering rule is inherited from the Unity original: everything in
 edges. The deeper rationale for each subsystem is documented in the original
 repo's `docs/adr/` and summarized per-divergence in [docs/PORT.md](docs/PORT.md).
 
-## Caveat: the cloud server
+## The cloud server
 
-`GameConfig.PRODUCTION_SERVER_ADDRESS` still points at the original deployment,
-which today runs the **Unity** server. The two game transports (Unity Transport
-vs ENet) are not cross-compatible — deploy this project's `--server` build
-there (or anywhere) before pointing players at it. Only the LAN *discovery*
-protocol is shared between the two implementations.
+`GameConfig.PRODUCTION_SERVER_ADDRESS` points at the live Godot dedicated server
+(`34.53.62.38:7778`), the client's default **Play Online** target. The legacy
+Unity server that previously shared this VM (udp/7777) was retired 2026-06-10;
+its transport (Unity Transport) was never cross-compatible with this build's
+ENet — only the LAN *discovery* protocol is shared. See
+[deploy/DEPLOY.md](deploy/DEPLOY.md).
