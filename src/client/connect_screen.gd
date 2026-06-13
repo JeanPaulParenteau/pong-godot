@@ -17,6 +17,7 @@ const Palette := preload("res://src/client/palette.gd")
 const LanDiscovery := preload("res://src/client/lan_discovery.gd")
 const LocalMatch := preload("res://src/client/local_match.gd")
 const Settings := preload("res://src/client/settings.gd")
+const ResultOverlay := preload("res://src/client/result_overlay.gd")
 
 var _net: Node      # NetBridge
 var _online: Node   # OnlineMatch
@@ -38,7 +39,7 @@ var _solo: LocalMatch = null
 # ---- UI nodes ----
 var _menu_panel: Control
 var _spectator_panel: Control
-var _solo_panel: Control
+var _result_overlay: Control  # unified solo + online game-over card
 var _custom_panel: Control
 var _server_list: VBoxContainer
 var _online_button: Button
@@ -50,7 +51,6 @@ var _leave_button: Button
 var _solo_leave_button: Button
 var _status_label: Label
 var _spectator_wait_label: Label
-var _solo_result_label: Label
 var _name_field: LineEdit
 var _ip_field: LineEdit
 var _port_field: LineEdit
@@ -297,10 +297,17 @@ func _process(_delta: float) -> void:
 	_poll_lan()
 
 	var solo_active := _solo != null and _solo.active
+
+	# A player (solo or online — never a spectator) at game-over gets the unified
+	# result overlay; spectators keep the in-field banner (drawn by GameRenderer).
+	var src = MatchSource.current
+	var show_result: bool = (not _spectating and src != null
+			and src.local_side() != GameTypes.NO_SIDE
+			and src.snapshot().state == GameTypes.GameState.GAME_OVER)
+
 	var show_menu := false
 	var show_spectator := false
 	var show_leave := false
-	var show_solo := false
 
 	if _spectating:
 		if MatchSource.current == null:
@@ -308,24 +315,22 @@ func _process(_delta: float) -> void:
 		else:
 			show_leave = true
 	elif _is_connected():
-		show_leave = true
-	elif solo_active:
-		show_solo = true
-	else:
+		show_leave = not show_result  # the overlay carries its own Leave
+	elif not solo_active:
 		show_menu = true
 
 	_set_panel_visible(_menu_panel, show_menu)
 	_set_panel_visible(_spectator_panel, show_spectator)
 	_leave_button.visible = show_leave
-	_set_panel_visible(_solo_panel, show_solo and _solo != null and _solo.finished)
-	_solo_leave_button.visible = show_solo and not _solo.finished
+	_solo_leave_button.visible = solo_active and not _solo.finished
+	_set_panel_visible(_result_overlay, show_result)
+	if show_result:
+		_result_overlay.apply(ResultOverlay.model(src, src.snapshot()), _result_callbacks())
 
 	if show_menu:
 		_refresh_menu()
 	if show_spectator:
 		_spectator_wait_label.text = "Waiting for a live game" + _dots()
-	if show_solo and _solo.finished:
-		_solo_result_label.text = _solo.result_text
 
 
 func _refresh_menu() -> void:
@@ -385,8 +390,9 @@ func _build_ui() -> void:
 	_build_menu_panel()
 	_spectator_panel = _card(440)
 	_build_spectator_panel()
-	_solo_panel = _card(380)
-	_build_solo_panel()
+	_result_overlay = ResultOverlay.new()
+	_result_overlay.visible = false
+	add_child(_result_overlay)
 	_leave_button = _corner_button("Leave", _on_leave_clicked)
 	_solo_leave_button = _corner_button("Leave", func() -> void:
 		if _solo != null:
@@ -466,23 +472,36 @@ func _build_spectator_panel() -> void:
 	_add_button(box, "Leave", Palette.NEUTRAL, _leave_spectating)
 
 
-func _build_solo_panel() -> void:
-	var box := _solo_panel.get_node("Box") as VBoxContainer
-	_solo_result_label = Label.new()
-	_solo_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_solo_result_label.add_theme_font_size_override("font_size", 26)
-	box.add_child(_solo_result_label)
+## Callbacks the result overlay fires by action name (solo + online paths).
+func _result_callbacks() -> Dictionary:
+	return {
+		"rematch": _result_rematch,
+		"difficulty": _result_set_difficulty,
+		"menu": _result_menu,
+		"find_new_game": _result_find_new_game,
+		"leave": _leave_online,
+	}
 
-	_add_button(box, "Rematch", Palette.ACCENT, func() -> void: _solo.begin(_solo.profile))
 
-	_section_label(box, "Change difficulty:")
-	var row := HBoxContainer.new()
-	box.add_child(row)
-	_add_button(row, "Easy", Palette.EASY, func() -> void: _solo.begin(BotProfile.easy()), false, true)
-	_add_button(row, "Medium", Palette.MEDIUM, func() -> void: _solo.begin(BotProfile.medium()), false, true)
-	_add_button(row, "Hard", Palette.HARD, func() -> void: _solo.begin(BotProfile.hard()), false, true)
+func _result_rematch() -> void:
+	if _solo != null:
+		_solo.begin(_solo.profile)
 
-	_add_button(box, "Main Menu", Palette.NEUTRAL, func() -> void: _solo.stop())
+
+func _result_set_difficulty(profile) -> void:
+	if _solo != null:
+		_solo.begin(profile)
+
+
+func _result_menu() -> void:
+	if _solo != null:
+		_solo.stop()
+
+
+func _result_find_new_game() -> void:
+	_leave_online()
+	_commit_name()
+	_connect_to(_ip, _port_text)
 
 
 # ---- small construction helpers ----

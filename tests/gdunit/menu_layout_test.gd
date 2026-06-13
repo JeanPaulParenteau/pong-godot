@@ -9,6 +9,8 @@ const NetBridge = preload("res://src/net/net_bridge.gd")
 const OnlineMatch = preload("res://src/client/online_match.gd")
 const GameRenderer = preload("res://src/client/game_renderer.gd")
 const ConnectScreen = preload("res://src/client/connect_screen.gd")
+const GameConfig = preload("res://src/shared/game_config.gd")
+const GameTypes = preload("res://src/shared/game_types.gd")
 
 const VP := Vector2(1280, 720)
 
@@ -70,6 +72,29 @@ func test_leave_buttons_are_on_screen() -> void:
 	# corner-button bug stranded touch players in a match with no way out).
 	assert_bool(_on_screen(_screen._leave_button)).is_true()
 	assert_bool(_on_screen(_screen._solo_leave_button)).is_true()
+
+
+func test_result_overlay_hidden_on_menu() -> void:
+	# At the menu (no match) the unified game-over overlay must be hidden.
+	assert_bool(_screen._result_overlay.visible).is_false()
+
+
+func test_result_overlay_on_screen_at_solo_game_over() -> void:
+	# Drive a real solo match to game-over (the production path) and assert the
+	# unified overlay shows on-screen — the guard against the 0×0/off-screen bug class.
+	_screen.debug_start_solo()
+	var solo = _screen._solo
+	for i in int(GameConfig.SERVE_DELAY * GameConfig.TICK_RATE) + 1:
+		solo._step_once()  # past the serve countdown into PLAYING
+	solo._session.left_score = GameConfig.WIN_SCORE - 1
+	solo._session.teleport_ball(Vector2(7.8, 0), Vector2(6, 0))  # human (LEFT) scores the winner
+	solo._step_once()
+	for i in 4:
+		await get_tree().process_frame  # let _process show + apply the overlay
+	var ov: Control = _screen._result_overlay
+	assert_bool(ov.visible).is_true()
+	assert_float(ov.size.x).is_greater(0.0)
+	assert_bool(_on_screen(ov)).is_true()
 
 
 # A Control's rect is non-empty and fully inside [0,0]–VP (1px slack).

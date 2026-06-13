@@ -180,10 +180,9 @@ func _draw() -> void:
 	_draw_score(left_half_score, right_half_score, me_right)
 	_draw_rally()
 
-	# In solo, the solo overlay draws its own result screen (YOU WIN / CPU WINS +
-	# actions), so suppress the generic game-over banner to avoid double messaging.
-	if not (source.is_local() and _latest.state == GameTypes.GameState.GAME_OVER):
-		_draw_banner(_latest, side)
+	# Players (solo + online) get the unified ResultOverlay at game-over; the banner
+	# only presents WAITING/SERVING for them, and the game-over line for spectators.
+	_draw_banner(_latest, side)
 
 	# A brief full-field white flash when a point lands.
 	if _score_flash > 0.0:
@@ -305,17 +304,15 @@ func _draw_banner(snap, local_side: int) -> void:
 				draw_string(font, Vector2(0, size.y * 0.5 - 70.0), "MATCH POINT",
 						HORIZONTAL_ALIGNMENT_CENTER, size.x, 24, Color(1.0, 0.7, 0.3, 0.9))
 		GameTypes.GameState.GAME_OVER:
-			if snap.game_over_reason == GameTypes.GameOverReason.OPPONENT_LEFT:
-				msg = "Opponent left"
-			# A player sees it from their own side; a spectator sees absolute Left/Right.
-			elif snap.winning_side != GameTypes.NO_SIDE and local_side != GameTypes.NO_SIDE:
-				msg = "YOU WIN!" if snap.winning_side == local_side else "YOU LOSE"
-			elif snap.winning_side == GameTypes.PlayerSide.LEFT:
-				msg = "LEFT PLAYER WINS!"
-			elif snap.winning_side == GameTypes.PlayerSide.RIGHT:
-				msg = "RIGHT PLAYER WINS!"
-			else:
-				msg = "Game over"
+			# Players (local_side set) get the ResultOverlay; only spectators
+			# (no seat) still see an in-field game-over line here.
+			if local_side == GameTypes.NO_SIDE:
+				if snap.winning_side == GameTypes.PlayerSide.LEFT:
+					msg = "LEFT PLAYER WINS!"
+				elif snap.winning_side == GameTypes.PlayerSide.RIGHT:
+					msg = "RIGHT PLAYER WINS!"
+				else:
+					msg = "Game over"
 	if msg.is_empty():
 		return
 
